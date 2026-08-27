@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111111">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Trade Risk">
+  <link rel="manifest" href="manifest.json">
+  <title>Trade Risk</title>
+  <style>
+    :root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color-scheme:dark}
+    body{margin:0;background:#0b0b0c;color:#f5f5f7}
+    .wrap{max-width:520px;margin:auto;padding:20px 16px 40px}
+    h1{font-size:28px;margin:8px 0 18px}
+    .tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+    button{border:0;border-radius:12px;padding:12px 14px;font-size:16px}
+    .tab{background:#1c1c1e;color:#fff}
+    .tab.active{background:#fff;color:#000}
+    .card{background:#161618;border-radius:18px;padding:16px;margin-bottom:14px}
+    label{display:block;font-size:13px;color:#aaa;margin:10px 0 6px}
+    input,select{width:100%;box-sizing:border-box;background:#222225;color:#fff;border:1px solid #333;border-radius:12px;padding:13px;font-size:18px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .result{display:flex;justify-content:space-between;gap:16px;padding:11px 0;border-bottom:1px solid #29292c}
+    .result:last-child{border-bottom:0}
+    .result b{font-variant-numeric:tabular-nums}
+    .muted{color:#999;font-size:13px}
+    .good{color:#55d68b}.bad{color:#ff6b6b}
+    .hidden{display:none}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Trade Risk</h1>
+
+  <div class="tabs">
+    <button id="tabTrade" class="tab active">Calcola trade</button>
+    <button id="tabLot" class="tab">Calcola lotto</button>
+  </div>
+
+  <section id="tradePane">
+    <div class="card">
+      <div class="grid">
+        <div>
+          <label>Tipo</label>
+          <select id="side1"><option>BUY</option><option>SELL</option></select>
+        </div>
+        <div>
+          <label>Lotti</label>
+          <input id="lots1" type="number" inputmode="decimal" step="0.01" value="0.02">
+        </div>
+      </div>
+      <label>ENTRY</label><input id="entry1" type="number" inputmode="decimal" step="0.01" value="4622.70">
+      <label>SL</label><input id="sl1" type="number" inputmode="decimal" step="0.01" value="4629.00">
+      <label>TP</label><input id="tp1" type="number" inputmode="decimal" step="0.01" value="4610.00">
+    </div>
+
+    <div class="card">
+      <div class="result"><span>Distanza SL</span><b id="dsl">—</b></div>
+      <div class="result"><span>Distanza TP</span><b id="dtp">—</b></div>
+      <div class="result"><span>Perdita a SL</span><b id="loss" class="bad">—</b></div>
+      <div class="result"><span>Profitto a TP</span><b id="profit" class="good">—</b></div>
+      <div class="result"><span>R:R</span><b id="rr">—</b></div>
+    </div>
+  </section>
+
+  <section id="lotPane" class="hidden">
+    <div class="card">
+      <label>Balance ($)</label><input id="balance" type="number" inputmode="decimal" value="490">
+      <div class="grid">
+        <div>
+          <label>Rischio (%)</label><input id="riskPct" type="number" inputmode="decimal" step="0.1" value="2">
+        </div>
+        <div>
+          <label>Step lotto</label><input id="lotStep" type="number" inputmode="decimal" step="0.01" value="0.01">
+        </div>
+      </div>
+      <label>ENTRY</label><input id="entry2" type="number" inputmode="decimal" step="0.01" value="4622.70">
+      <label>SL</label><input id="sl2" type="number" inputmode="decimal" step="0.01" value="4629.00">
+      <label>TP</label><input id="tp2" type="number" inputmode="decimal" step="0.01" value="4610.00">
+    </div>
+
+    <div class="card">
+      <div class="result"><span>Rischio massimo</span><b id="riskMoney">—</b></div>
+      <div class="result"><span>Lotto teorico</span><b id="lotTheo">—</b></div>
+      <div class="result"><span>Lotto da usare</span><b id="lotUse">—</b></div>
+      <div class="result"><span>Perdita effettiva</span><b id="realLoss" class="bad">—</b></div>
+      <div class="result"><span>Profitto a TP</span><b id="realProfit" class="good">—</b></div>
+      <div class="result"><span>R:R</span><b id="rr2">—</b></div>
+    </div>
+  </section>
+
+  <p class="muted">Assunzione XAUUSD: 1 lotto = 100 oz. Verifica il contract size del tuo broker.</p>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const n=id=>parseFloat($(id).value)||0;
+const money=x=>"$"+Math.abs(x).toFixed(2);
+const dist=(a,b)=>Math.abs(a-b);
+
+function calcTrade(){
+  const e=n("entry1"), s=n("sl1"), t=n("tp1"), l=n("lots1");
+  const ds=dist(e,s), dt=dist(e,t);
+  const loss=l*ds*100, prof=l*dt*100;
+  $("dsl").textContent=ds.toFixed(2);
+  $("dtp").textContent=dt.toFixed(2);
+  $("loss").textContent="-"+money(loss);
+  $("profit").textContent="+"+money(prof);
+  $("rr").textContent=ds>0?"1 : "+(dt/ds).toFixed(2):"—";
+}
+
+function floorStep(v,step){
+  if(step<=0)return v;
+  return Math.floor((v+1e-12)/step)*step;
+}
+function calcLot(){
+  const bal=n("balance"), rp=n("riskPct"), e=n("entry2"), s=n("sl2"), t=n("tp2"), step=n("lotStep");
+  const ds=dist(e,s), dt=dist(e,t);
+  const risk=bal*rp/100;
+  const theo=ds>0?risk/(ds*100):0;
+  const use=floorStep(theo,step);
+  const loss=use*ds*100, prof=use*dt*100;
+  $("riskMoney").textContent=money(risk);
+  $("lotTheo").textContent=theo?theo.toFixed(4):"—";
+  $("lotUse").textContent=use?use.toFixed(2):"—";
+  $("realLoss").textContent=use?"-"+money(loss):"—";
+  $("realProfit").textContent=use?"+"+money(prof):"—";
+  $("rr2").textContent=ds>0?"1 : "+(dt/ds).toFixed(2):"—";
+}
+
+document.querySelectorAll("input,select").forEach(el=>el.addEventListener("input",()=>{calcTrade();calcLot();}));
+$("tabTrade").onclick=()=>{
+  $("tradePane").classList.remove("hidden"); $("lotPane").classList.add("hidden");
+  $("tabTrade").classList.add("active"); $("tabLot").classList.remove("active");
+};
+$("tabLot").onclick=()=>{
+  $("lotPane").classList.remove("hidden"); $("tradePane").classList.add("hidden");
+  $("tabLot").classList.add("active"); $("tabTrade").classList.remove("active");
+};
+if("serviceWorker" in navigator){navigator.serviceWorker.register("service-worker.js").catch(()=>{});}
+calcTrade(); calcLot();
+</script>
+</body>
+</html>
